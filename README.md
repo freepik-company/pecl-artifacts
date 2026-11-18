@@ -1,6 +1,7 @@
 # pecl-artifacts
 
-Mirror of the PECL extension tarballs used by Freepik PHP images.
+Mirror of the PECL extension tarballs used by Freepik PHP images, and of the few model files
+our service images pin the same way (see [Models](#models)).
 
 pecl.php.net has no official mirrors and falls over under load. It was unreachable for
 most of 2026-10-21, the day of the PHP RCE patch (CVE-2026-109618/109619), while every
@@ -97,3 +98,26 @@ lines, then `pecl install /tmp/pecl/a.tgz /tmp/pecl/b.tgz`.
    are normal; any other source difference is a reason not to commit.
 4. Copy it to `packages/`, regenerate `SHA256SUMS` (`cd packages && sha256sum *.tgz > ../SHA256SUMS`)
    and add the row above with what you verified it against.
+
+## Models
+
+Model files a service image needs at build time, pinned and checksummed for the same reason:
+no image build depends on a third party's download. They are not PECL tarballs, so they live
+in `models/` with their own `SHA256SUMS` and their upstream licence next to them.
+
+Rules:
+
+- A model is committed only with its licence and a note of how the file was produced and
+  checked. Never replace a file: a new export is a new version next to the old one.
+- `models/SHA256SUMS` is the source of truth. Check with `cd models && sha256sum -c SHA256SUMS`.
+
+| File | Licence | SHA256 | Produced and verified |
+|---|---|---|---|
+| `transnetv2/transnetv2-1.onnx` | MIT (`transnetv2/LICENSE`, Tomáš Souček 2020) | `66400c0b675ecfc4…` | TransNetV2 ([soCzech/TransNetV2](https://github.com/soCzech/TransNetV2)), the weights bundled in `transnetv2-pytorch` 1.0.5, exported with `transnetv2/export.py` (torch 2.15, opset 17): input `frames` uint8 `[1, 100, 27, 48, 3]`, output `prob` `[1, 100]`, the single-frame head after a sigmoid. Matches the PyTorch model to 1.7e-7 on random inputs, and finds the same Cuts as the Python reference on a 17-clip bench (pikaso `docs/video/research/shot-detection.md`). Used by pikaso `services/shot-detection` (ADR-0014). Legal approved it on 2026-11-18. |
+
+```dockerfile
+ADD --checksum=sha256:66400c0b675ecfc4dc5241099ee4eece9434ff3a307bf44b44062d9b355b5d20 \
+  https://raw.githubusercontent.com/freepik-company/pecl-artifacts/main/models/transnetv2/transnetv2-1.onnx \
+  /app/model/transnetv2.onnx
+```
+
